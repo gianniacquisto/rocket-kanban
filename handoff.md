@@ -1,7 +1,7 @@
 # Handoff: Rocket Kanban App
 
 ## Current Status
-**Build in progress** — most components are written but the Vite build is hanging/very slow. The app is ~85% complete.
+**Build working** — Vite build completes in ~4s. All components compile. The app is ~90% complete. Ready for Supabase setup and testing.
 
 ## Project: Rocket Kanban
 A futuristic, arcade-themed Kanban board app built with SvelteKit + Supabase.
@@ -73,6 +73,11 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - [x] Rocket launch celebration when a list is completed
 - [x] Animated starfield background with pixel rockets
 - [x] Neon/arcade theme
+- [x] Removed deprecated `lucide-svelte` dependency
+- [x] Fixed self-closing non-void HTML elements
+- [x] Added ARIA roles to interactive divs
+- [x] Fixed label associations in CardSlideOver
+- [x] Fixed h1→button for accessibility
 - [ ] Supabase schema applied to actual project
 - [ ] Environment variables configured
 - [ ] End-to-end testing
@@ -85,34 +90,28 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - Database schema SQL is ready
 
 ### Known Issues to Fix
-1. **Vite build hanging** — the `vite build` command times out. This is the blocker.
-2. **Supabase TypeScript types** — `insert()` returns `never[]` in the type inference. Workaround is using `as any` casts in some places. The `database.types.ts` file has the full schema but Supabase client isn't using it correctly.
-3. **Tailwind v4** — installed but the `@tailwindcss/vite` plugin needs the correct import path (`import tailwindcss from '@tailwindcss/vite'`).
-4. **Some accessibility warnings** (non-critical): missing ARIA roles on interactive divs, missing label associations, etc.
+1. **`as any` casts in CardSlideOver.svelte** — Supabase type inference still needs work. The `insert()` calls use `as any` for labels and card_labels.
+2. **`autofocus` attribute warnings** — Svelte 5 prefers focus via refs + `$effect`. Found in List.svelte, BoardSidebar.svelte, CardSlideOver.svelte, board/[id]/+page.svelte.
+3. **Non-interactive elements with click handlers** — Card.svelte uses `role="article"` with `onclick` — should be addressed for full accessibility.
+4. **`adapter-auto` warning** — no production deployment target configured (expected for local dev).
 
 ### Critical Next Steps
-1. **Fix the build** — run `npx vite build` and resolve whatever is causing it to hang. Check if it's:
-   - Tailwind v4 configuration issue
-   - Large bundle from animations
-   - Some dependency conflict
-2. **Configure Supabase** — user needs to:
-   - Create a Supabase project
-   - Run `supabase-schema.sql` in the SQL editor
-   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env.local`
-3. **Test the full flow** — signup → create board → add cards → drag and drop
-4. **Polish** — fix remaining accessibility warnings, add keyboard shortcuts, improve mobile responsiveness
+1. **Configure Supabase** — create a project, run `supabase-schema.sql`, add `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`)
+2. **Test the full flow** — signup → create board → add cards → drag and drop
+3. **Fix `as any` casts** — clean up Supabase type inference for label/card_labels inserts
+4. **Polish** — fix autofocus warnings with refs/$effect, improve keyboard accessibility, add mobile responsiveness
 
 ## Files to Review/Modify
 
-### Priority (Build Blocking)
-- `/home/gianni/projects/kanban-app/vite.config.ts` — Tailwind plugin config
-- `/home/gianni/projects/kanban-app/src/lib/supabase/client.ts` — Supabase client type inference
-- `/home/gianni/projects/kanban-app/src/lib/supabase/database.types.ts` — Type definitions
+### Priority
+- `.env.local` — Add your Supabase URL and anon key
+- `src/lib/components/CardSlideOver.svelte` — `as any` casts for label insertions
+- `src/lib/components/BoardSidebar.svelte` — `as any` cast for board insert
 
 ### Nice to Fix
-- `/home/gianni/projects/kanban-app/src/lib/components/CardSlideOver.svelte` — Uses `get()` from stores but could be simplified with Svelte 5 stores syntax
-- `/home/gianni/projects/kanban-app/src/routes/board/[id]/+page.svelte` — Heavy page, could use lazy loading for lists
-- `/home/gianni/projects/kanban-app/src/app.css` — Could add more arcade styling (scanlines, CRT effect, etc.)
+- `src/routes/board/[id]/+page.svelte` — Heavy page, could use lazy loading for lists
+- `src/app.css` — Could add more arcade styling (scanlines, CRT effect, etc.)
+- All components with `autofocus` — replace with refs + `$effect(() => ref.focus())`
 
 ## Important Context from Grilling Session
 - The user wanted an **arcadey, futuristic** feel — pixel rockets, neon accents, satisfying animations
@@ -132,4 +131,14 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - No API keys or secrets in version control
 
 ## One-Line Summary
-**SvelteKit Kanban app with Supabase auth, animated pixel-rocket background, and arcade aesthetic — components are written but Vite build is hanging and needs troubleshooting.**
+**SvelteKit Kanban app with Supabase auth, animated pixel-rocket background, and arcade aesthetic — build works, ready for Supabase env setup and testing.**
+
+## Session Log (2026-06-07)
+- Verified `vite build` completes successfully (~4s)
+- Removed deprecated `lucide-svelte` dependency
+- Fixed self-closing non-void HTML elements (`div />`, `textarea />`, `span />`)
+- Added ARIA roles (`role="button"`, `role="article"`, `role="list"`) to interactive divs
+- Added keyboard handlers (`onkeydown` with Enter) to interactive divs
+- Fixed label association in CardSlideOver (added `id` and `for` attributes)
+- Changed `<h1>` with onclick to `<button>` for accessibility
+- Created `.env.example` for Supabase config

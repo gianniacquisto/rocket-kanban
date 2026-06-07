@@ -84,6 +84,7 @@
 </script>
 
 <div
+  role="list"
   class={`flex flex-col bg-gray-900/60 backdrop-blur-sm rounded-xl border transition-all duration-200 ${
     draggingOver
       ? 'border-cyan-500/50 shadow-lg shadow-cyan-500/10 bg-cyan-500/5'
@@ -105,9 +106,9 @@
         autofocus
       />
     {:else}
-      <div class="flex items-center gap-2 cursor-pointer group" onclick={startEdit}>
+      <div role="button" tabindex="0" class="flex items-center gap-2 cursor-pointer group" onclick={startEdit} onkeydown={(e) => e.key === 'Enter' && startEdit()}>
         <GripVertical size={14} class="text-gray-600 group-hover:text-gray-400" />
-        <h3 class="text-sm font-mono text-gray-300 group-hover:text-white transition-colors">
+          <h3 class="text-sm font-mono text-gray-300 group-hover:text-white transition-colors">
           {list.name}
         </h3>
         <span class="text-xs text-gray-600 font-mono">({cards.length})</span>
@@ -172,7 +173,7 @@
           class="w-full bg-gray-800/80 border border-gray-600 rounded-lg p-2 text-sm text-white font-mono resize-none outline-none focus:border-cyan-500/50 transition-colors"
           rows={2}
           autofocus
-        />
+        ></textarea>
         <div class="flex items-center gap-2 mt-2">
           <button
             onclick={addCard}

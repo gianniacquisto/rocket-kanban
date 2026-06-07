@@ -118,8 +118,9 @@
     <div class="p-4 space-y-6">
       <!-- Title -->
       <div>
-        <label class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2 block">Title</label>
+        <label class="text-xs font-mono text-gray-500 uppercase tracking-widest mb-2 block" for="card-title">Title</label>
         <input
+          id="card-title"
           bind:value={title}
           onblur={saveCard}
           class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-lg text-white font-mono outline-none focus:border-cyan-500/50 transition-colors"
@@ -137,7 +138,7 @@
           onblur={saveCard}
           class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-3 text-sm text-gray-300 font-mono resize-none outline-none focus:border-cyan-500/50 transition-colors min-h-[120px]"
           placeholder="Add a more detailed description..."
-        />
+        ></textarea>
       </div>
 
       <!-- Due Date -->
@@ -195,7 +196,7 @@
                 class="h-6 w-8 rounded-md cursor-pointer"
                 style="background-color: {label.color}"
                 title={label.name}
-              />
+              ></div>
               <span class="text-xs font-mono text-gray-400">{label.name}</span>
               <button
                 onclick={() => removeLabel(label.id)}
@@ -223,8 +224,11 @@
 
   <!-- Backdrop -->
   <div
+    role="button"
+    tabindex="0"
+    onkeydown={(e) => e.key === 'Escape' && close()}
     transition:fade="{{ duration: 200 }}"
     onclick={close}
     class="fixed inset-0 bg-black/50 z-40"
-  />
+  ></div>
 {/if}

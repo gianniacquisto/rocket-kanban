@@ -283,13 +283,14 @@
               autofocus
             />
           {:else}
-            <h1
+            <button
+              type="button"
               onclick={() => { editingBoardName = true }}
-              class="text-xl font-mono text-white hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-2"
+              class="text-xl font-mono text-white hover:text-cyan-400 cursor-pointer transition-colors flex items-center gap-2 text-left"
             >
               {get(currentBoard)?.board.icon || '🚀'} {boardName}
               <Settings size={16} class="text-gray-600" />
-            </h1>
+            </button>
           {/if}
         </div>
 
@@ -299,7 +300,7 @@
           </button>
           <button class="p-2 text-gray-500 hover:text-cyan-400 transition-colors relative">
             <Bell size={18} />
-            <span class="absolute top-1 right-1 w-2 h-2 bg-cyan-500 rounded-full" />
+            <span class="absolute top-1 right-1 w-2 h-2 bg-cyan-500 rounded-full"></span>
           </button>
         </div>
       </header>

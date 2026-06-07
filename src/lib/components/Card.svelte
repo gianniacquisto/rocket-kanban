@@ -43,6 +43,7 @@
 </script>
 
 <div
+  role="article"
   draggable="true"
   ondragstart={(e) => {
     if (e.dataTransfer) {
@@ -65,7 +66,7 @@
           class="h-2 w-6 rounded-sm"
           style="background-color: {label.color}"
           title={label.name}
-        />
+        ></div>
       {/each}
     </div>
   {/if}

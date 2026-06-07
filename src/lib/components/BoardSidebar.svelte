@@ -151,7 +151,10 @@
             </div>
           {:else}
             <div
+              role="button"
+              tabindex="0"
               onclick={() => selectBoard(b.id)}
+              onkeydown={(e) => e.key === 'Enter' && selectBoard(b.id)}
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-mono transition-all group flex items-center gap-2 cursor-pointer"
               class:highlight={$currentBoard?.board.id === b.id}
             >

@@ -145,7 +145,7 @@
 
           <div class="relative my-6">
             <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-700/50" />
+              <div class="w-full border-t border-gray-700/50"></div>
             </div>
             <div class="relative flex justify-center text-xs">
               <span class="px-4 bg-gray-900/80 text-gray-600 font-mono">OR</span>
