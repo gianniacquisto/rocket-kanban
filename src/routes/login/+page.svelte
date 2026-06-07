@@ -11,12 +11,7 @@
   let sendingOtp = $state(false)
   let showingOtp = $state(false)
 
-  // Redirect if already logged in
-  $effect(() => {
-    if ($isAuthenticated) {
-      window.location.href = '/board'
-    }
-  })
+
 
   async function handleLogin() {
     loading = true
@@ -36,6 +31,14 @@
     if (loginError) {
       error = loginError.message
       loading = false
+    } else {
+      // Redirect to first board
+      const { data: boards } = await supabase.from('boards').select('id').order('created_at', { ascending: false }).limit(1)
+      if (boards && boards.length > 0) {
+        window.location.href = `/board/${boards[0].id}`
+      } else {
+        window.location.href = '/'
+      }
     }
   }
 
