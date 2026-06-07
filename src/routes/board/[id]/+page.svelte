@@ -27,8 +27,17 @@
   let loading = $state(true)
   let rocketShow = $state(false)
   let editingBoardName = $state(false)
+  let boardNameInputRef: HTMLInputElement | undefined
 
-  // Load initial board
+  // Focus board name input when editing starts
+  $effect(() => {
+    if (editingBoardName && boardNameInputRef) {
+      boardNameInputRef.focus()
+      boardNameInputRef.select()
+    }
+  })
+
+// Load initial board
   async function loadBoard(boardId: string) {
     loading = true
 
@@ -93,10 +102,17 @@
   // Handle list updates
   async function handleUpdateList(e: CustomEvent) {
     const { listId, name } = e.detail
-    await supabase
+    if (!get(currentBoard)) return
+
+    const { error } = await supabase
       .from('lists')
       .update({ name })
       .eq('id', listId)
+
+    if (error) {
+      alert(`Failed to update list: ${error.message}`)
+      return
+    }
 
     lists = lists.map(l => l.id === listId ? { ...l, name } : l)
     currentBoard.set({
@@ -109,11 +125,14 @@
   async function handleAddCard(e: CustomEvent) {
     const { listId, title } = e.detail
     const targetList = lists.find(l => l.id === listId)
+    const board = get(currentBoard)
+    if (!board) return
+
     const position = targetList?.cards.length || 0
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('cards')
-      .insert({ title, list_id: listId, board_id: get(currentBoard)!.board.id, position })
+      .insert({ title, list_id: listId, board_id: board.board.id, position })
       .select(`
         *,
         card_labels (
@@ -122,6 +141,11 @@
         )
       `)
       .single()
+
+    if (error) {
+      alert(`Failed to create card: ${error.message}`)
+      return
+    }
 
     if (data) {
       const cardWithLabels = {
@@ -134,7 +158,7 @@
       )
 
       currentBoard.set({
-        board: get(currentBoard)!.board,
+        board: board.board,
         lists,
       })
     }
@@ -143,8 +167,10 @@
   // Handle card drop (move to different list)
   async function handleCardDrop(e: CustomEvent) {
     const { cardId, listId } = e.detail
-    const targetList = lists.find(l => l.id === listId)
+    const board = get(currentBoard)
+    if (!board) return
 
+    const targetList = lists.find(l => l.id === listId)
     if (!targetList) return
 
     // Find the card
@@ -153,18 +179,28 @@
     if (!card) return
 
     const oldListId = card.list_id
+    if (oldListId === listId) return // Same list, no-op (could add reordering later)
 
     // Remove from old list
     lists = lists.map(l =>
       l.id === oldListId ? { ...l, cards: l.cards.filter((c: any) => c.id !== cardId) } : l
     )
 
-    // Update position in new list
+    // Update position in new list (append at end)
     const newPosition = targetList.cards.length
-    await supabase
+    const { error } = await supabase
       .from('cards')
       .update({ list_id: listId, position: newPosition })
       .eq('id', cardId)
+
+    if (error) {
+      alert(`Failed to move card: ${error.message}`)
+      // Revert: add card back to old list
+      lists = lists.map(l =>
+        l.id === oldListId ? { ...l, cards: [...l.cards, card] } : l
+      )
+      return
+    }
 
     // Update current state
     lists = lists.map(l =>
@@ -172,13 +208,16 @@
     )
 
     currentBoard.set({
-      board: get(currentBoard)!.board,
+      board: board.board,
       lists,
     })
 
-    // Rocket launch when a list becomes complete
-    const targetListAfter = lists.find(l => l.id === listId)?.cards.length || 0
-    if (targetListAfter === 0 && targetList.name !== 'To Do') {
+    // Rocket launch when a list becomes complete (last item moved out, list is "Done")
+    const targetListAfter = lists.find(l => l.id === listId)?.cards || []
+    const sourceListAfter = lists.find(l => l.id === oldListId)?.cards || []
+
+    // Fire rocket when a non-To-Do list has been emptied (all items done)
+    if (targetListAfter.length === 0 && targetList.name !== 'To Do') {
       rocketShow = true
       setTimeout(() => (rocketShow = false), 3000)
     }
@@ -189,30 +228,48 @@
     const { listId } = e.detail
     if (!confirm('Delete this list and all its cards?')) return
 
-    await supabase.from('lists').delete().eq('id', listId)
+    const board = get(currentBoard)
+    if (!board) return
+
+    const { error } = await supabase.from('lists').delete().eq('id', listId)
+    if (error) {
+      alert(`Failed to delete list: ${error.message}`)
+      return
+    }
 
     lists = lists.filter(l => l.id !== listId)
     currentBoard.set({
-      board: get(currentBoard)!.board,
+      board: board.board,
       lists,
     })
   }
 
   // Handle new list creation
   async function handleAddList() {
+    const board = get(currentBoard)
+    if (!board) return
+
     const name = prompt('List name:') || 'New List'
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+
     const position = lists.length
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('lists')
-      .insert({ name, board_id: get(currentBoard)!.board.id, position })
+      .insert({ name: trimmedName, board_id: board.board.id, position })
       .select()
       .single()
+
+    if (error) {
+      alert(`Failed to create list: ${error.message}`)
+      return
+    }
 
     if (data) {
       lists = [...lists, { ...data, cards: [] }]
       currentBoard.set({
-        board: get(currentBoard)!.board,
+        board: board.board,
         lists,
       })
     }
@@ -225,9 +282,10 @@
     }
   })
 
-  // Load board when user exists
+  // Load board when user exists and boardId is present
   $effect(() => {
-    if (get(currentUser) && !loading) {
+    const user = get(currentUser)
+    if (user && !loading) {
       const url = new URL(window.location.href)
       const boardId = url.pathname.split('/board/')[1]
       if (boardId) loadBoard(boardId)
@@ -276,11 +334,11 @@
         <div class="flex items-center gap-4">
           {#if editingBoardName}
             <input
+              bind:this={boardNameInputRef}
               bind:value={boardName}
               onblur={saveBoardName}
               onkeydown={(e) => e.key === 'Enter' && saveBoardName()}
               class="bg-gray-800 border border-cyan-500/50 rounded-lg px-3 py-1.5 text-lg text-white font-mono outline-none"
-              autofocus
             />
           {:else}
             <button

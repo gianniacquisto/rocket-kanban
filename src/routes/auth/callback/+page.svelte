@@ -4,7 +4,7 @@
   import { currentUser, isAuthenticated } from '$lib/stores/app'
   import StarfieldBg from '$lib/components/StarfieldBg.svelte'
 
-  let message = 'Processing login...'
+  let message = $state('Processing login...')
 
   onMount(async () => {
     message = 'Verifying your session...'

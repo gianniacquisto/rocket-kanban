@@ -9,37 +9,20 @@
   const isAuth = $derived($isAuthenticated)
 
   async function handleEmailSignup() {
-    const email = prompt('Enter your email:')
-    if (email) {
-      const password = prompt('Enter password:')
-      if (password) {
-        await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        })
-      }
-    }
+    window.location.href = '/signup'
   }
 
   async function handleEmailLogin() {
-    const email = prompt('Enter your email:')
-    if (email) {
-      await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-    }
+    window.location.href = '/login'
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    currentUser.set(null)
-    isAuthenticated.set(false)
+    const { error } = await supabase.auth.signOut()
+    if (!error) {
+      currentUser.set(null)
+      isAuthenticated.set(false)
+      window.location.href = '/'
+    }
   }
 </script>
 

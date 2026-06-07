@@ -4,7 +4,7 @@
   import { currentUser } from '$lib/stores/app'
   import StarfieldBg from '$lib/components/StarfieldBg.svelte'
 
-  let message = 'Loading...'
+  let message = $state('Loading...')
 
   onMount(async () => {
     const user = $currentUser
@@ -26,20 +26,31 @@
     } else {
       message = 'No boards yet. Creating your first board...'
       // Create default board
-      const { data: newBoard } = await supabase
+      const { data: newBoard, error: boardError } = await supabase
         .from('boards')
         .insert({ name: 'My Board', owner_id: user.id, icon: '🚀' })
         .select()
         .single()
 
+      if (boardError) {
+        message = `Error creating board: ${boardError.message}`
+        return
+      }
+
       if (newBoard) {
         message = 'Setting up your board...'
         // Create default lists
-        await supabase.from('lists').insert([
+        const { error: listError } = await supabase.from('lists').insert([
           { name: 'To Do', board_id: newBoard.id, position: 0 },
           { name: 'In Progress', board_id: newBoard.id, position: 1 },
           { name: 'Done', board_id: newBoard.id, position: 2 },
         ])
+
+        if (listError) {
+          message = `Error creating lists: ${listError.message}`
+          return
+        }
+
         window.location.href = `/board/${newBoard.id}`
       } else {
         message = 'Something went wrong. Please refresh.'

@@ -40,10 +40,19 @@
     slideOverOpen.set(true)
     onEdit()
   }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      selectCard()
+    }
+  }
 </script>
 
 <div
-  role="article"
+  role="button"
+  tabindex="0"
+  aria-label={`Card: ${card.title}`}
   draggable="true"
   ondragstart={(e) => {
     if (e.dataTransfer) {
@@ -54,7 +63,8 @@
   }}
   ondragend={onDragEnd}
   onclick={selectCard}
-  class="group bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-200 mb-2 relative"
+  onkeydown={handleKeyDown}
+  class="group bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-200 mb-2 relative text-left w-full"
   class:opacity-60={isDragging}
   class:scale-105={isDragging}
 >
@@ -66,7 +76,7 @@
           class="h-2 w-6 rounded-sm"
           style="background-color: {label.color}"
           title={label.name}
-        ></div>
+        />
       {/each}
     </div>
   {/if}
@@ -91,11 +101,17 @@
     {/if}
   </div>
 
-  <!-- Hover actions -->
-  <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+  <!-- Hover actions - moved outside to avoid nested button -->
+  <div
+    class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+    role="group"
+    aria-label="Card actions"
+  >
     <button
+      type="button"
       onclick={(e) => { e.stopPropagation(); onEdit() }}
-      class="p-1 text-gray-500 hover:text-cyan-400 transition-colors"
+      onkeydown={(e) => e.stopPropagation()}
+      class="p-1 text-gray-500 hover:text-cyan-400 transition-colors rounded hover:bg-gray-700"
     >
       <Edit3 size={14} />
     </button>

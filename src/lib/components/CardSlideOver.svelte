@@ -45,54 +45,134 @@
 
   async function saveCard() {
     if (!card) return
-    await supabase
+    const { error } = await supabase
       .from('cards')
       .update({ title, description, due_date: dueDate || null })
       .eq('id', card.id)
       .select()
       .single()
+
+    if (error) {
+      alert(`Failed to save card: ${error.message}`)
+      return
+    }
+
+    // Sync local state after successful save
+    const board = get(currentBoard)
+    if (board) {
+      lists = board.lists.map(l => ({
+        ...l,
+        cards: l.cards.map(c =>
+          c.id === card.id
+            ? { ...c, title, description, due_date: dueDate || null }
+            : c
+        ),
+      }))
+      currentBoard.set({ board: board.board, lists })
+      selectedCard.set({ ...card, title, description, due_date: dueDate || null })
+    }
   }
 
   async function deleteCard() {
     if (!card) return
     if (!confirm('Delete this card?')) return
-    await supabase.from('cards').delete().eq('id', card.id)
+
+    const { error } = await supabase.from('cards').delete().eq('id', card.id)
+    if (error) {
+      alert(`Failed to delete card: ${error.message}`)
+      return
+    }
+
+    // Remove from local state
+    const board = get(currentBoard)
+    if (board) {
+      lists = board.lists.map(l => ({
+        ...l,
+        cards: l.cards.filter((c: any) => c.id !== card.id),
+      }))
+      currentBoard.set({ board: board.board, lists })
+    }
     close()
   }
 
   async function addLabel() {
     if (!labelName.trim() || !board || !authUser) return
-    const { data: labelData } = await supabase
+
+    const { data: labelData, error: labelError } = await supabase
       .from('labels')
       .insert({
         name: labelName.trim(),
         color: labelColor,
         board_id: board.board.id,
         owner_id: authUser.id,
-      } as any)
+      })
       .select()
       .single()
 
+    if (labelError) {
+      alert(`Failed to create label: ${labelError.message}`)
+      return
+    }
+
     if (labelData && card) {
-      await supabase.from('card_labels').insert({
+      const { error: joinError } = await supabase.from('card_labels').insert({
         card_id: card.id,
         label_id: labelData.id,
-      } as any)
+      })
+
+      if (joinError) {
+        alert(`Failed to add label to card: ${joinError.message}`)
+        return
+      }
+
       // Update the card with the new label
-      selectedCard.set({ ...card, labels: [...card.labels, labelData] })
+      const updatedLabels = [...card.labels, labelData]
+      selectedCard.set({ ...card, labels: updatedLabels })
+
+      // Also update in the board lists
+      const currentBoardData = get(currentBoard)
+      if (currentBoardData) {
+        lists = currentBoardData.lists.map(l => ({
+          ...l,
+          cards: l.cards.map((c: any) =>
+            c.id === card.id ? { ...c, labels: updatedLabels } : c
+          ),
+        }))
+        currentBoard.set({ board: currentBoardData.board, lists })
+      }
+
       showNewLabelForm = false
     }
   }
 
   async function removeLabel(labelId: string) {
     if (!card) return
-    await supabase
+    const { error } = await supabase
       .from('card_labels')
       .delete()
       .eq('card_id', card.id)
       .eq('label_id', labelId)
-    // Update the card
-    selectedCard.set({ ...card, labels: cardLabels.filter(l => l.id !== labelId) })
+
+    if (error) {
+      alert(`Failed to remove label: ${error.message}`)
+      return
+    }
+
+    const updatedLabels = cardLabels.filter(l => l.id !== labelId)
+    const updatedCard = { ...card, labels: updatedLabels }
+    selectedCard.set(updatedCard)
+
+    // Update in the board lists
+    const currentBoardData = get(currentBoard)
+    if (currentBoardData) {
+      lists = currentBoardData.lists.map(l => ({
+        ...l,
+        cards: l.cards.map((c: any) =>
+          c.id === card.id ? { ...c, labels: updatedLabels } : c
+        ),
+      }))
+      currentBoard.set({ board: currentBoardData.board, lists })
+    }
   }
 </script>
 

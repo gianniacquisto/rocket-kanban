@@ -40,9 +40,9 @@
     if (signUpError) {
       error = signUpError.message
       loading = false
-    } else {
-      success = true
+      return
     }
+    success = true
   }
 
   function navigateToLogin() {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { supabase } from '$lib/supabase/client'
-  import { isAuthenticated } from '$lib/stores/app'
+  import { isAuthenticated, currentUser } from '$lib/stores/app'
   import StarfieldBg from '$lib/components/StarfieldBg.svelte'
   import { Rocket, ArrowLeft, Mail, Lock } from '@lucide/svelte'
 
@@ -10,8 +10,6 @@
   let error = $state('')
   let sendingOtp = $state(false)
   let showingOtp = $state(false)
-
-
 
   async function handleLogin() {
     loading = true
@@ -23,7 +21,7 @@
       return
     }
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({
+    const { error: loginError, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -31,14 +29,24 @@
     if (loginError) {
       error = loginError.message
       loading = false
+      return
+    }
+
+    // Set auth state
+    if (data?.session?.user) {
+      currentUser.set({
+        id: data.session.user.id,
+        email: data.session.user.email || '',
+      })
+      isAuthenticated.set(true)
+    }
+
+    // Redirect to first board
+    const { data: boards } = await supabase.from('boards').select('id').order('created_at', { ascending: false }).limit(1)
+    if (boards && boards.length > 0) {
+      window.location.href = `/board/${boards[0].id}`
     } else {
-      // Redirect to first board
-      const { data: boards } = await supabase.from('boards').select('id').order('created_at', { ascending: false }).limit(1)
-      if (boards && boards.length > 0) {
-        window.location.href = `/board/${boards[0].id}`
-      } else {
-        window.location.href = '/'
-      }
+      window.location.href = '/'
     }
   }
 

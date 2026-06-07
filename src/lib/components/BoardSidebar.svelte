@@ -21,6 +21,14 @@
   let renameBoardId = $state('')
   let deletingBoardId = $state('')
   let creating = $state(false)
+  let renameInputRef: HTMLInputElement | undefined
+
+  $effect(() => {
+    if (showRenameForm && renameInputRef) {
+      renameInputRef.focus()
+      renameInputRef.select()
+    }
+  })
 
   async function loadBoards() {
     const user = $currentUser
@@ -42,19 +50,36 @@
     if (!user) return
     creating = true
     const name = prompt('Board name:') || 'My Board'
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      creating = false
+      return
+    }
+
     const result = await supabase
       .from('boards')
-      .insert({ name, owner_id: user.id, icon: '🚀' })
+      .insert({ name: trimmedName, owner_id: user.id, icon: '🚀' })
       .select()
       .single()
-    const boardData = result.data
 
-    if (!result.error && boardData) {
-      await supabase.from('lists').insert([
+    if (result.error) {
+      alert(`Failed to create board: ${result.error.message}`)
+      creating = false
+      return
+    }
+
+    const boardData = result.data
+    if (boardData) {
+      const { error: listError } = await supabase.from('lists').insert([
         { name: 'To Do', board_id: boardData.id, position: 0 },
         { name: 'In Progress', board_id: boardData.id, position: 1 },
         { name: 'Done', board_id: boardData.id, position: 2 },
       ])
+
+      if (listError) {
+        alert(`Failed to create default lists: ${listError.message}`)
+      }
+
       await loadBoards()
       window.location.href = `/board/${boardData.id}`
     }
@@ -136,11 +161,11 @@
           {#if showRenameForm && b.id === renameBoardId}
             <div class="flex items-center gap-1 p-1">
               <input
+                bind:this={renameInputRef}
                 bind:value={renameValue}
                 onblur={() => saveRename(b.id)}
                 onkeydown={(e) => e.key === 'Enter' && saveRename(b.id)}
                 class="flex-1 bg-gray-800 border border-cyan-500/50 rounded px-2 py-1 text-xs text-white font-mono"
-                autofocus
               />
               <button onclick={() => saveRename(b.id)} class="text-green-400 hover:text-green-300">
                 <Check size={14} />
@@ -156,7 +181,7 @@
               onclick={() => selectBoard(b.id)}
               onkeydown={(e) => e.key === 'Enter' && selectBoard(b.id)}
               class="w-full text-left px-3 py-2 rounded-lg text-sm font-mono transition-all group flex items-center gap-2 cursor-pointer"
-              class:highlight={$currentBoard?.board.id === b.id}
+              class:highlight={$currentBoard && $currentBoard.board.id === b.id}
             >
               <span class="text-base">{b.icon || '📋'}</span>
               <span class="truncate flex-1">{b.name}</span>

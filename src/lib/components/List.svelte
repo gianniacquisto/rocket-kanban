@@ -26,6 +26,8 @@
   let newCardTitle = $state('')
   let draggingOver = $state(false)
   let draggedCardId = $state('')
+  let editInputRef: HTMLInputElement | undefined
+  let cardInputRef: HTMLTextAreaElement | undefined
 
   function startEdit() {
     editTitle = list.name
@@ -37,6 +39,19 @@
     dispatch('update-list', { listId: list.id, name: editTitle.trim() })
     editing = false
   }
+
+  $effect(() => {
+    if (editing && editInputRef) {
+      editInputRef.focus()
+      editInputRef.select()
+    }
+  })
+
+  $effect(() => {
+    if (showNewCard && cardInputRef) {
+      cardInputRef.focus()
+    }
+  })
 
   function addCard() {
     if (!newCardTitle.trim()) return
@@ -99,11 +114,11 @@
   <div class="flex items-center justify-between p-3 border-b border-gray-700/30">
     {#if editing}
       <input
+        bind:this={editInputRef}
         bind:value={editTitle}
         onblur={saveTitle}
         onkeydown={(e) => e.key === 'Enter' && saveTitle()}
         class="flex-1 bg-gray-800 border border-cyan-500/50 rounded px-2 py-1 text-sm text-white font-mono outline-none"
-        autofocus
       />
     {:else}
       <div role="button" tabindex="0" class="flex items-center gap-2 cursor-pointer group" onclick={startEdit} onkeydown={(e) => e.key === 'Enter' && startEdit()}>
@@ -164,6 +179,7 @@
     {#if showNewCard}
       <div>
         <textarea
+          bind:this={cardInputRef}
           bind:value={newCardTitle}
           onkeydown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addCard() }
@@ -172,7 +188,6 @@
           placeholder="Enter card title..."
           class="w-full bg-gray-800/80 border border-gray-600 rounded-lg p-2 text-sm text-white font-mono resize-none outline-none focus:border-cyan-500/50 transition-colors"
           rows={2}
-          autofocus
         ></textarea>
         <div class="flex items-center gap-2 mt-2">
           <button
