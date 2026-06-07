@@ -1,7 +1,7 @@
 # Handoff: Rocket Kanban App
 
 ## Current Status
-**Build working** — Vite build completes in ~4s. All components compile. The app is ~90% complete. Ready for Supabase setup and testing.
+**Build working** — Vite build completes in ~4s. All components compile. Auth flow working. The app is ~95% complete. Ready for full end-to-end testing.
 
 ## Project: Rocket Kanban
 A futuristic, arcade-themed Kanban board app built with SvelteKit + Supabase.
@@ -42,9 +42,11 @@ src/
 │       └── database.types.ts       - TypeScript types
 ├── routes/
 │   ├── +page.svelte                - Landing page
+│   ├── auth/callback/+page.svelte  - OAuth/auth callback handler
+│   ├── board/+page.svelte          - Redirect to first board / auto-create
+│   ├── board/[id]/+page.svelte     - Main board view
 │   ├── login/+page.svelte          - Login page
 │   ├── signup/+page.svelte         - Signup page
-│   └── board/[id]/+page.svelte     - Main board view
 ├── app.css                         - Global styles
 ├── app.html                        - HTML template
 ├── vite.config.ts                  - Vite config (with Tailwind plugin)
@@ -78,8 +80,12 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - [x] Added ARIA roles to interactive divs
 - [x] Fixed label associations in CardSlideOver
 - [x] Fixed h1→button for accessibility
-- [ ] Supabase schema applied to actual project
-- [ ] Environment variables configured
+- [x] Lazy-loaded Supabase client (works without env vars for landing page)
+- [x] Local Supabase dev stack (Docker, via `npx supabase start`)
+- [x] Auth callback page for email verification flow
+- [x] /board catch-all page (redirects to first board or creates one)
+- [x] Post-login redirect to first board
+- [x] Supabase schema applied via migrations
 - [ ] End-to-end testing
 
 ## Current Build Status
@@ -96,17 +102,16 @@ card_labels (card_id, label_id)  -- many-to-many junction
 4. **`adapter-auto` warning** — no production deployment target configured (expected for local dev).
 
 ### Critical Next Steps
-1. **Configure Supabase** — create a project, run `supabase-schema.sql`, add `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `.env.example`)
-2. **Test the full flow** — signup → create board → add cards → drag and drop
-3. **Fix `as any` casts** — clean up Supabase type inference for label/card_labels inserts
-4. **Polish** — fix autofocus warnings with refs/$effect, improve keyboard accessibility, add mobile responsiveness
+1. **Test the full flow** — login → create board → add cards → drag and drop (local Supabase is already configured)
+2. **Fix `as any` casts** — clean up Supabase type inference for label/card_labels inserts
+3. **Polish** — fix autofocus warnings with refs/$effect, improve keyboard accessibility, add mobile responsiveness
 
 ## Files to Review/Modify
 
 ### Priority
-- `.env.local` — Add your Supabase URL and anon key
 - `src/lib/components/CardSlideOver.svelte` — `as any` casts for label insertions
 - `src/lib/components/BoardSidebar.svelte` — `as any` cast for board insert
+- `src/lib/components/CardSlideOver.svelte` — Uses `get()` from stores but could be simplified with Svelte 5 stores syntax
 
 ### Nice to Fix
 - `src/routes/board/[id]/+page.svelte` — Heavy page, could use lazy loading for lists
@@ -131,9 +136,10 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - No API keys or secrets in version control
 
 ## One-Line Summary
-**SvelteKit Kanban app with Supabase auth, animated pixel-rocket background, and arcade aesthetic — build works, ready for Supabase env setup and testing.**
+**SvelteKit Kanban app with Supabase auth, animated pixel-rocket background, and arcade aesthetic — build works, local Supabase running, full auth flow functional.**
 
 ## Session Log (2026-06-07)
+### Build & Accessibility Fixes
 - Verified `vite build` completes successfully (~4s)
 - Removed deprecated `lucide-svelte` dependency
 - Fixed self-closing non-void HTML elements (`div />`, `textarea />`, `span />`)
@@ -141,4 +147,37 @@ card_labels (card_id, label_id)  -- many-to-many junction
 - Added keyboard handlers (`onkeydown` with Enter) to interactive divs
 - Fixed label association in CardSlideOver (added `id` and `for` attributes)
 - Changed `<h1>` with onclick to `<button>` for accessibility
+
+### Dev Server Improvements
+- Made Supabase client lazy-loaded — app renders landing page without env vars
 - Created `.env.example` for Supabase config
+
+### Supabase Setup
+- Initialized `supabase` CLI, created migration `001_initial_schema.sql`
+- Set up local Supabase dev stack via Docker (`npx supabase start`)
+- Configured `.env.local` with local Supabase credentials
+- Schema auto-applied on `supabase start` (boards, lists, cards, labels, RLS, triggers)
+
+### Auth Flow Fixes
+- Removed redirect-from-login loop (was causing 404 on `/board`)
+- Created `/auth/callback` page for OAuth/email verification flow
+- Created `/board` catch-all page (redirects to first board or auto-creates one)
+- Post-login redirect now goes to user's first board
+- Login page no longer redirects before authentication attempt
+
+## Local Supabase Setup
+```bash
+# Start local Supabase stack
+cd /home/gianni/projects/rocket-kanban
+npx supabase start
+
+# Stop
+npx supabase stop
+
+# Reset database (re-runs all migrations)
+npx supabase db reset
+
+# API URL: http://127.0.0.1:54321
+# Studio:   http://127.0.0.1:54323
+# Mailpit:  http://127.0.0.1:54324
+```
